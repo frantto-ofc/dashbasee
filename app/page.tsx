@@ -17,6 +17,9 @@ export default async function HomePage() {
       user={{
         id: user.id,
         email: user.email ?? "Conta",
+        fullName: user.user_metadata.full_name,
+        businessName: user.user_metadata.business_name,
+        phone: user.user_metadata.phone,
       }}
     />
   );
