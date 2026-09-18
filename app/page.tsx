@@ -20,6 +20,7 @@ export default async function HomePage() {
         fullName: user.user_metadata.full_name,
         businessName: user.user_metadata.business_name,
         phone: user.user_metadata.phone,
+        avatarUrl: user.user_metadata.avatar_url,
       }}
     />
   );
