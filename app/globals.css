@@ -555,6 +555,42 @@ button:disabled {
   font-weight: 500;
 }
 
+.profile-avatar.has-photo {
+  background-position: center;
+  background-size: cover;
+  color: transparent !important;
+}
+
+.account-photo-picker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.account-photo-picker > div {
+  display: grid;
+  gap: 4px;
+}
+
+.account-photo-picker strong {
+  font-size: 14px;
+}
+
+.account-photo-picker > div > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.account-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
 .account-heading {
   margin-bottom: 24px;
 }
@@ -4719,6 +4755,10 @@ button:disabled {
   .account-status {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .account-photo-picker {
+    align-items: flex-start;
   }
 }
 
