@@ -1055,6 +1055,7 @@ type DashboardUser = {
   fullName?: string;
   businessName?: string;
   phone?: string;
+  avatarUrl?: string;
 };
 
 export default function Dashboard({ user }: { user: DashboardUser }) {
@@ -1096,10 +1097,12 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
     fullName: user.fullName ?? "",
     businessName: user.businessName ?? "",
     phone: user.phone ?? "",
+    avatarUrl: user.avatarUrl ?? "",
   });
   const lastSyncedAtRef = useRef("");
   const skipNextSaveRef = useRef(false);
   const importRef = useRef<HTMLInputElement>(null);
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
   const alarmAudioContextRef = useRef<AudioContext | null>(null);
   const alarmedTaskKeysRef = useRef<Set<string>>(new Set());
   const editingProject =
@@ -2284,11 +2287,52 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
         full_name: profile.fullName.trim(),
         business_name: profile.businessName.trim(),
         phone: profile.phone.trim(),
+        avatar_url: profile.avatarUrl,
       },
     });
     setSavingProfile(false);
     showToast(error ? "Não foi possível salvar o perfil." : "Perfil atualizado.");
   };
+
+  const handleProfilePhotoChange = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("Escolha uma imagem em JPG, PNG ou WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Escolha uma imagem de até 5 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new window.Image();
+      image.onload = () => {
+        const size = 128;
+        const crop = Math.min(image.width, image.height);
+        const sourceX = (image.width - crop) / 2;
+        const sourceY = (image.height - crop) / 2;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        canvas
+          .getContext("2d")
+          ?.drawImage(image, sourceX, sourceY, crop, crop, 0, 0, size, size);
+        setProfile((current) => ({
+          ...current,
+          avatarUrl: canvas.toDataURL("image/jpeg", 0.7),
+        }));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const profileName = profile.fullName.trim() || user.email;
+  const profileBusiness =
+    profile.businessName.trim() || "Dados privados desta conta";
+  const profileInitials = profileName.slice(0, 2).toUpperCase();
 
   return (
     <div className="app-shell">
@@ -2331,10 +2375,19 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
         </div>
 
         <div className="profile">
-          <span className="profile-avatar">{user.email.slice(0, 2).toUpperCase()}</span>
+          <span
+            className={`profile-avatar ${profile.avatarUrl ? "has-photo" : ""}`}
+            style={
+              profile.avatarUrl
+                ? { backgroundImage: `url("${profile.avatarUrl}")` }
+                : undefined
+            }
+          >
+            {profile.avatarUrl ? <span className="sr-only">{profileInitials}</span> : profileInitials}
+          </span>
           <div>
-            <strong title={user.email}>{user.email}</strong>
-            <span>Dados privados desta conta</span>
+            <strong title={profileName}>{profileName}</strong>
+            <span>{profileBusiness}</span>
           </div>
           <ShieldCheck size={18} />
         </div>
@@ -4328,13 +4381,20 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
 
               <section className="account-grid">
                 <article className="panel account-profile-card">
-                  <span className="profile-avatar account-avatar">
-                    {(profile.fullName || user.email).slice(0, 2).toUpperCase()}
+                  <span
+                    className={`profile-avatar account-avatar ${profile.avatarUrl ? "has-photo" : ""}`}
+                    style={
+                      profile.avatarUrl
+                        ? { backgroundImage: `url("${profile.avatarUrl}")` }
+                        : undefined
+                    }
+                  >
+                    {profile.avatarUrl ? <span className="sr-only">{profileInitials}</span> : profileInitials}
                   </span>
                   <div>
                     <span className="eyebrow">Sua conta</span>
                     <h2>{profile.fullName || "Complete seu perfil"}</h2>
-                    <p>{user.email}</p>
+                    <p>{profile.businessName || user.email}</p>
                   </div>
                   <span className="account-status">
                     <span className="save-dot" /> Conta ativa
@@ -4348,6 +4408,52 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
                       <h2>Informações principais</h2>
                     </div>
                     <ShieldCheck size={22} />
+                  </div>
+                  <div className="account-photo-picker">
+                    <span
+                      className={`profile-avatar account-avatar ${profile.avatarUrl ? "has-photo" : ""}`}
+                      style={
+                        profile.avatarUrl
+                          ? { backgroundImage: `url("${profile.avatarUrl}")` }
+                          : undefined
+                      }
+                    >
+                      {profile.avatarUrl ? <span className="sr-only">{profileInitials}</span> : profileInitials}
+                    </span>
+                    <div>
+                      <strong>Foto de perfil</strong>
+                      <span>JPG, PNG ou WebP. A imagem é ajustada automaticamente.</span>
+                      <div className="account-photo-actions">
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => profilePhotoInputRef.current?.click()}
+                        >
+                          Alterar foto
+                        </button>
+                        {profile.avatarUrl && (
+                          <button
+                            type="button"
+                            className="text-button"
+                            onClick={() =>
+                              setProfile((current) => ({ ...current, avatarUrl: "" }))
+                            }
+                          >
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      ref={profilePhotoInputRef}
+                      className="sr-only"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => {
+                        handleProfilePhotoChange(event.target.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
                   </div>
                   <div className="account-fields">
                     <label>
