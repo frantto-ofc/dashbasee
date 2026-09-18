@@ -34,6 +34,7 @@ import {
   Repeat2,
   RotateCcw,
   Search,
+  Settings,
   ShieldCheck,
   Sun,
   Target,
@@ -55,7 +56,8 @@ type View =
   | "projects"
   | "kanban"
   | "finance"
-  | "backup";
+  | "backup"
+  | "account";
 type ProjectStatus = "planned" | "in-progress" | "paused" | "completed";
 type CrmStatus = "prospecting" | "approach" | "follow-up" | "closed";
 type DailyArea = "focus" | "routine" | "quick";
@@ -1050,6 +1052,9 @@ function EmptyState({
 type DashboardUser = {
   id: string;
   email: string;
+  fullName?: string;
+  businessName?: string;
+  phone?: string;
 };
 
 export default function Dashboard({ user }: { user: DashboardUser }) {
@@ -1086,6 +1091,12 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
   const [saveError, setSaveError] = useState(false);
   const [syncing, setSyncing] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profile, setProfile] = useState({
+    fullName: user.fullName ?? "",
+    businessName: user.businessName ?? "",
+    phone: user.phone ?? "",
+  });
   const lastSyncedAtRef = useRef("");
   const skipNextSaveRef = useRef(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -2249,6 +2260,7 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
     { id: "kanban", label: "Flooow", icon: Columns3 },
     { id: "finance", label: "Financeiro", icon: WalletCards },
     { id: "backup", label: "Dados e backup", icon: Database },
+    { id: "account", label: "Conta", icon: Settings },
   ];
 
   const handleSignOut = async () => {
@@ -2261,6 +2273,21 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
       return;
     }
     window.location.replace("/login");
+  };
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (savingProfile) return;
+    setSavingProfile(true);
+    const { error } = await createClient().auth.updateUser({
+      data: {
+        full_name: profile.fullName.trim(),
+        business_name: profile.businessName.trim(),
+        phone: profile.phone.trim(),
+      },
+    });
+    setSavingProfile(false);
+    showToast(error ? "Não foi possível salvar o perfil." : "Perfil atualizado.");
   };
 
   return (
@@ -4285,6 +4312,168 @@ export default function Dashboard({ user }: { user: DashboardUser }) {
                   </div>
                 </div>
                 <span className="phase-pill">Ativo</span>
+              </section>
+            </>
+          )}
+
+          {activeView === "account" && (
+            <>
+              <section className="page-heading account-heading">
+                <div>
+                  <span className="eyebrow">Preferências do workspace</span>
+                  <h1>Conta e configurações</h1>
+                  <p>Gerencie sua identidade, seu estúdio e suas preferências.</p>
+                </div>
+              </section>
+
+              <section className="account-grid">
+                <article className="panel account-profile-card">
+                  <span className="profile-avatar account-avatar">
+                    {(profile.fullName || user.email).slice(0, 2).toUpperCase()}
+                  </span>
+                  <div>
+                    <span className="eyebrow">Sua conta</span>
+                    <h2>{profile.fullName || "Complete seu perfil"}</h2>
+                    <p>{user.email}</p>
+                  </div>
+                  <span className="account-status">
+                    <span className="save-dot" /> Conta ativa
+                  </span>
+                </article>
+
+                <form className="panel account-form" onSubmit={saveProfile}>
+                  <div className="account-section-heading">
+                    <div>
+                      <span className="eyebrow">Perfil e negócio</span>
+                      <h2>Informações principais</h2>
+                    </div>
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div className="account-fields">
+                    <label>
+                      <span>Nome</span>
+                      <input
+                        value={profile.fullName}
+                        onChange={(event) =>
+                          setProfile((current) => ({
+                            ...current,
+                            fullName: event.target.value,
+                          }))
+                        }
+                        placeholder="Seu nome"
+                      />
+                    </label>
+                    <label>
+                      <span>Nome do estúdio ou negócio</span>
+                      <input
+                        value={profile.businessName}
+                        onChange={(event) =>
+                          setProfile((current) => ({
+                            ...current,
+                            businessName: event.target.value,
+                          }))
+                        }
+                        placeholder="Nome do seu negócio"
+                      />
+                    </label>
+                    <label>
+                      <span>WhatsApp</span>
+                      <input
+                        value={profile.phone}
+                        onChange={(event) =>
+                          setProfile((current) => ({
+                            ...current,
+                            phone: event.target.value,
+                          }))
+                        }
+                        placeholder="+55 81 99999-9999"
+                      />
+                    </label>
+                    <label>
+                      <span>E-mail de acesso</span>
+                      <input value={user.email} readOnly />
+                      <small>O e-mail é gerenciado pelo seu método de login.</small>
+                    </label>
+                  </div>
+                  <div className="account-form-actions">
+                    <span>As alterações ficam vinculadas à sua conta.</span>
+                    <button
+                      type="submit"
+                      className="button primary"
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? "Salvando…" : "Salvar perfil"}
+                    </button>
+                  </div>
+                </form>
+
+                <article className="panel account-preferences">
+                  <div className="account-section-heading">
+                    <div>
+                      <span className="eyebrow">Workspace</span>
+                      <h2>Preferências</h2>
+                    </div>
+                    <Settings size={22} />
+                  </div>
+                  <label>
+                    <span>Meta mensal</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={store.settings.monthlyGoal}
+                      onChange={(event) =>
+                        setStore((current) => ({
+                          ...current,
+                          settings: {
+                            ...current.settings,
+                            monthlyGoal: Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="account-preference-row">
+                    <div>
+                      <strong>Tema da interface</strong>
+                      <span>Alterne entre visual claro e escuro.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={toggleTheme}
+                    >
+                      {store.settings.theme === "light" ? (
+                        <Moon size={17} />
+                      ) : (
+                        <Sun size={17} />
+                      )}
+                      {store.settings.theme === "light" ? "Escuro" : "Claro"}
+                    </button>
+                  </div>
+                </article>
+
+                <article className="panel account-security">
+                  <div className="account-section-heading">
+                    <div>
+                      <span className="eyebrow">Segurança</span>
+                      <h2>Sessão e acesso</h2>
+                    </div>
+                    <ShieldCheck size={22} />
+                  </div>
+                  <p>
+                    Seus dados ficam isolados por usuário e sincronizados com a
+                    conta usada no login.
+                  </p>
+                  <button
+                    type="button"
+                    className="button secondary danger-text"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                  >
+                    {signingOut ? "Saindo…" : "Sair desta conta"}
+                  </button>
+                </article>
               </section>
             </>
           )}
